@@ -4,6 +4,7 @@ let playerId;
 let currentChain = [];
 let revealedLetters = [];
 let currentGuessIndex = -1;
+let currentRound = 0;
 
 // Initialize on page load
 $(document).ready(function() {
@@ -51,6 +52,9 @@ function handleServerMessage(data) {
             break;
         case 'playerState':
             updatePlayerState(data);
+            break;
+        case 'roundComplete':
+            showRoundCompleteModal();
             break;
         case 'log':
             addEventLog(data.message);
@@ -127,9 +131,14 @@ function updatePlayerName() {
 function updateGameState(state) {
     currentChain = state.chain;
     
-    // Initialize empty revealed letters for new round
-    if (!revealedLetters || revealedLetters.length !== currentChain.length) {
-        revealedLetters = currentChain.map(() => []);
+    // Always reset revealed letters when game state updates
+    // This ensures new rounds/games start fresh
+    revealedLetters = currentChain.map(() => []);
+    
+    // Hide round complete modal only when new round starts
+    if (state.currentRound !== currentRound) {
+        $('#round-complete-modal').addClass('hidden').css('display', 'none');
+        currentRound = state.currentRound;
     }
     
     // Update round info
@@ -146,6 +155,18 @@ function updateGameState(state) {
 function updatePlayerState(state) {
     revealedLetters = state.revealedLetters;
     renderChain();
+}
+
+// Show round complete modal
+function showRoundCompleteModal() {
+    console.log('Round complete! Showing modal...');
+    const modal = $('#round-complete-modal');
+    console.log('Modal element found:', modal.length);
+    console.log('Modal classes before:', modal.attr('class'));
+    modal.removeClass('hidden');
+    modal.css('display', 'flex'); // Explicitly set display
+    console.log('Modal classes after:', modal.attr('class'));
+    console.log('Modal display:', modal.css('display'));
 }
 
 // Render the word chain

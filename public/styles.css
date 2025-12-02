@@ -468,6 +468,23 @@ body {
     z-index: 999;
 }
 
+/* Round Complete Modal */
+#round-complete-modal .modal-content {
+    text-align: center;
+    max-width: 400px;
+}
+
+#round-complete-modal h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.round-wait {
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 1rem;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .container {

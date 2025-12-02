@@ -104,6 +104,12 @@ function startNewRound() {
     });
     
     broadcastGameState();
+    
+    // Send updated player states to ensure everyone has fresh revealed letters
+    gameState.players.forEach((player, playerId) => {
+        sendPlayerState(playerId);
+    });
+    
     logEvent(`Round ${gameState.currentRound} started! Chain has ${wordsCount} words.`);
 }
 
@@ -317,6 +323,11 @@ function handleRoundWin(playerId) {
     
     player.score++;
     gameState.roundWinner = player.name;
+    
+    // Notify the player they completed the round
+    player.ws.send(JSON.stringify({
+        type: 'roundComplete'
+    }));
     
     logEvent(`${player.name} solved the chain and wins Round ${gameState.currentRound}!`);
     broadcastGameState();
