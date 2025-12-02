@@ -1,0 +1,20 @@
+{
+  "name": "chain-reaction",
+  "version": "1.0.0",
+  "description": "Fun game about building chains of words.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development nodemon src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    
+  }
+}
