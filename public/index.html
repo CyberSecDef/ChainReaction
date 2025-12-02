@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chain Reaction - Word Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Status Bar -->
+    <header class="status-bar">
+        <div class="status-left">
+            <span id="round-info">Round 1 of 10</span>
+        </div>
+        <div class="status-center">
+            <h1>Chain Reaction</h1>
+        </div>
+        <div class="status-right">
+            <input type="text" id="player-name-input" placeholder="Your Name" maxlength="20" autocomplete="off">
+            <button id="theme-toggle" class="icon-button" aria-label="Toggle theme">🌙</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Play Area -->
+        <section class="play-area">
+            <div id="chain-container">
+                <!-- Chain will be dynamically generated here -->
+            </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Leaderboard -->
+            <section class="leaderboard">
+                <h2>Leaderboard</h2>
+                <div id="leaderboard-list">
+                    <p class="empty-message">Waiting for players...</p>
+                </div>
+            </section>
+
+            <!-- Event Log -->
+            <section class="event-log">
+                <h2>Event Log</h2>
+                <div id="event-log-list">
+                    <p class="empty-message">No events yet</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- Guess Modal -->
+    <div id="guess-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Guess the Word</h2>
+            <p id="guess-hint"></p>
+            <input type="text" id="guess-input" placeholder="Enter your guess" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="submit-guess">Submit</button>
+                
+                <button id="cancel-guess" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Modal -->
+    <div id="winner-modal" class="modal hidden">
+        <div class="modal-content winner-content">
+            <h2>🎉 Congratulations! 🎉</h2>
+            <p id="winner-message"></p>
+            <canvas id="confetti-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="jquery-3.7.1.min.js"></script>
+    <script src="shared.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
