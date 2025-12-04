@@ -198,6 +198,15 @@ body {
     box-shadow: 0 4px 8px var(--shadow);
 }
 
+/* Cooldown flash when reveal requested too soon */
+@keyframes flashRed {
+    0% { background-color: var(--danger); }
+    100% { background-color: var(--bg-tertiary); }
+}
+.word-item.unsolved.cooldown-flash {
+    animation: flashRed 0.3s ease;
+}
+
 .guess-button {
     background-color: var(--accent);
     color: white;

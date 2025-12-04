@@ -21,7 +21,7 @@ const wordPairs = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/words
 let gameState = {
     currentRound: 1,
     chain: [],
-    players: new Map(), // playerId -> { name, score, ws, revealedLetters }
+    players: new Map(), // playerId -> { name, score, ws, revealedLetters, revealCooldowns }
     roundStartTime: null,
     roundWinner: null
 };
@@ -101,6 +101,8 @@ function startNewRound() {
     // Reset revealed letters for all players
     gameState.players.forEach(player => {
         player.revealedLetters = gameState.chain.map(() => new Set());
+        // Reset per-word reveal cooldowns (timestamps)
+        player.revealCooldowns = gameState.chain.map(() => 0);
     });
     
     broadcastGameState();
@@ -225,7 +227,8 @@ function handleJoin(playerId, name, ws) {
         name: name || `Player ${gameState.players.size + 1}`,
         score: 0,
         ws,
-        revealedLetters: gameState.chain.map(() => new Set())
+        revealedLetters: gameState.chain.map(() => new Set()),
+        revealCooldowns: gameState.chain.map(() => 0)
     });
     
     const player = gameState.players.get(playerId);
@@ -259,10 +262,27 @@ function handleRevealLetter(playerId, wordIndex) {
     
     // Skip first and last words (they're already visible)
     if (wordIndex === 0 || wordIndex === gameState.chain.length - 1) return;
-    
+
+    // Enforce 10s cooldown per word per player
+    const now = Date.now();
+    const last = player.revealCooldowns[wordIndex] || 0;
+    const COOLDOWN_MS = 10000;
+    if (now - last < COOLDOWN_MS) {
+        sendRevealCooldown(playerId, wordIndex, COOLDOWN_MS - (now - last));
+        return;
+    }
+
+    // Proceed with reveal and set cooldown timestamp
+    revealLetterInternal(playerId, wordIndex);
+    player.revealCooldowns[wordIndex] = now;
+}
+
+// Internal helper to reveal a letter without cooldown checks
+function revealLetterInternal(playerId, wordIndex) {
+    const player = gameState.players.get(playerId);
+    if (!player) return;
     const word = gameState.chain[wordIndex];
     const revealed = player.revealedLetters[wordIndex];
-    
     // Find next unrevealed letter, but don't reveal the last letter
     for (let i = 0; i < word.length - 1; i++) {
         if (!revealed.has(i)) {
@@ -270,8 +290,18 @@ function handleRevealLetter(playerId, wordIndex) {
             break;
         }
     }
-    
     sendPlayerState(playerId);
+}
+
+// Notify a single player that reveal is on cooldown
+function sendRevealCooldown(playerId, wordIndex, remainingMs) {
+    const player = gameState.players.get(playerId);
+    if (!player) return;
+    player.ws.send(JSON.stringify({
+        type: 'revealCooldown',
+        wordIndex,
+        remainingMs
+    }));
 }
 
 // Handle word guess
@@ -294,8 +324,8 @@ function handleGuess(playerId, wordIndex, guess) {
             handleRoundWin(playerId);
         }
     } else {
-        // Wrong guess - automatically reveal a letter
-        handleRevealLetter(playerId, wordIndex);
+        // Wrong guess - automatically reveal a letter (bypass cooldown)
+        revealLetterInternal(playerId, wordIndex);
     }
 }
 

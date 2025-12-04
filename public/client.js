@@ -5,6 +5,7 @@ let currentChain = [];
 let revealedLetters = [];
 let currentGuessIndex = -1;
 let currentRound = 0;
+let lastRevealRequest = {}; // per-wordIndex timestamp
 
 // Initialize on page load
 $(document).ready(function() {
@@ -55,6 +56,9 @@ function handleServerMessage(data) {
             break;
         case 'roundComplete':
             showRoundCompleteModal();
+            break;
+        case 'revealCooldown':
+            flashCooldown(data.wordIndex);
             break;
         case 'log':
             addEventLog(data.message);
@@ -139,6 +143,7 @@ function updateGameState(state) {
     if (state.currentRound !== currentRound) {
         $('#round-complete-modal').addClass('hidden').css('display', 'none');
         currentRound = state.currentRound;
+        lastRevealRequest = {}; // reset cooldown trackers on new round
     }
     
     // Update round info
@@ -184,7 +189,7 @@ function renderChain() {
         const isLast = index === currentChain.length - 1;
         const isSolved = revealedLetters[index] && revealedLetters[index].length === word.length;
         
-        const wordDiv = $('<div>').addClass('word-item');
+            const wordDiv = $('<div>').addClass('word-item').attr('data-index', index);
         
         if (isFirst || isLast) {
             // First and last words are always visible
@@ -275,6 +280,14 @@ function revealLetter() {
 
 // Reveal a letter directly (when clicking word div)
 function revealLetterDirect(wordIndex) {
+    const now = Date.now();
+    const last = lastRevealRequest[wordIndex] || 0;
+    const COOLDOWN_MS = 10000;
+    if (now - last < COOLDOWN_MS) {
+        flashCooldown(wordIndex);
+        return;
+    }
+    lastRevealRequest[wordIndex] = now;
     ws.send(JSON.stringify({
         type: 'revealLetter',
         wordIndex: wordIndex
@@ -442,4 +455,12 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Flash a word item red to indicate cooldown
+function flashCooldown(wordIndex) {
+    const el = $(`.word-item[data-index="${wordIndex}"]`);
+    if (!el.length) return;
+    el.addClass('cooldown-flash');
+    setTimeout(() => el.removeClass('cooldown-flash'), 350);
 }
