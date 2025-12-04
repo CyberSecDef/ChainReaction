@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8011;
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -22,6 +22,7 @@ let gameState = {
     currentRound: 1,
     chain: [],
     players: new Map(), // playerId -> { name, score, ws, revealedLetters, revealCooldowns }
+    usedWords: new Set(), // words used in previous rounds (persist until game reset)
     roundStartTime: null,
     roundWinner: null
 };
@@ -46,48 +47,66 @@ const wordGraph = buildWordGraph();
 // Generate a word chain using BFS
 function generateWordChain(length) {
     const words = Array.from(wordGraph.keys());
-    const maxAttempts = 100;
-    
+    const maxAttempts = 200;
+
+    // Prefer starting from words not used in previous rounds
+    const unusedStarts = words.filter(w => !gameState.usedWords.has(w));
+    const candidateStarts = unusedStarts.length > 0 ? unusedStarts : words;
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const startWord = words[Math.floor(Math.random() * words.length)];
-        const chain = findChain(startWord, length, wordGraph);
-        
+        const startWord = candidateStarts[Math.floor(Math.random() * candidateStarts.length)];
+        const chain = findChain(startWord, length, wordGraph, gameState.usedWords);
+
         if (chain && chain.length === length) {
             return chain;
         }
     }
-    
-    // Fallback: return a simple chain
+
+    // If we couldn't find a chain that avoids used words, fall back to any chain
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const startWord = words[Math.floor(Math.random() * words.length)];
+        const chain = findChain(startWord, length, wordGraph, new Set());
+        if (chain && chain.length === length) return chain;
+    }
+
+    // Last resort: return first N words
     return words.slice(0, length);
 }
 
 // BFS to find a chain of specific length
-function findChain(startWord, targetLength, graph) {
+function findChain(startWord, targetLength, graph, usedWords = new Set()) {
+    // Do not start from a previously used word
+    if (usedWords.has(startWord)) return null;
+
     const queue = [[startWord]];
     const visited = new Set([startWord]);
-    
+
     while (queue.length > 0) {
         const path = queue.shift();
-        
+
         if (path.length === targetLength) {
             return path;
         }
-        
+
         const lastWord = path[path.length - 1];
         const neighbors = graph.get(lastWord) || [];
-        
+
         for (const neighbor of neighbors) {
+            // Skip neighbors that were used in previous rounds
+            if (usedWords.has(neighbor)) continue;
+
             if (!visited.has(neighbor)) {
                 visited.add(neighbor);
-                queue.push([...path, neighbor]);
-                
-                if (path.length + 1 === targetLength) {
-                    return [...path, neighbor];
+                const newPath = [...path, neighbor];
+                // If we've reached target length, return immediately
+                if (newPath.length === targetLength) {
+                    return newPath;
                 }
+                queue.push(newPath);
             }
         }
     }
-    
+
     return null;
 }
 
@@ -95,6 +114,8 @@ function findChain(startWord, targetLength, graph) {
 function startNewRound() {
     const wordsCount = getWordsForRound(gameState.currentRound);
     gameState.chain = generateWordChain(wordsCount);
+    // Mark these words as used for future rounds (avoid repeats until game reset)
+    gameState.chain.forEach(w => gameState.usedWords.add(w));
     gameState.roundStartTime = Date.now();
     gameState.roundWinner = null;
     
@@ -121,6 +142,8 @@ function startNewGame() {
     gameState.players.forEach(player => {
         player.score = 0;
     });
+    // Clear used words when starting a fresh game
+    gameState.usedWords = new Set();
     startNewRound();
     logEvent('New game started! All scores reset to 0.');
 }
@@ -410,5 +433,5 @@ function generateId() {
 
 // Start server
 server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
